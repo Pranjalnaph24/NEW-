@@ -27,6 +27,9 @@ class AssemblerPassOne:
                 continue
 
             # Handle ORIGIN directive (sets starting address)
+            if parts[0] == "START":
+                self.current_address =int( parts[1]) if len(parts)>0 else self.current_address
+                continue
             if parts[0] == "ORIGIN":
                 self.current_address = int(parts[1]) if len(parts) > 1 else self.current_address
                 continue
@@ -38,13 +41,14 @@ class AssemblerPassOne:
 
             # Handle END directive
             if parts[0] == "END":
-                self.intermediate_code.append((self.current_address, "FF"))  # Using FF for END opcode
+                self.intermediate_code.append((self.current_address, "END"))  # Using FF for END opcode
                 break
 
             # Handle labels (symbol table)
             if parts[0].endswith(":"):
                 label = parts[0][:-1]  # Remove the colon from the label
                 self.symbol_table[label] = self.current_address
+                
                 parts = parts[1:]  # Remove the label part from the instruction
            
             # Handle DECLARE statements (constant and storage declarations)
@@ -56,17 +60,19 @@ class AssemblerPassOne:
                         
                         self.symbol_table[parts[2]] = self.current_address
                         
+                        self.intermediate_code.append((self.current_address,value))
                     elif declaration_type == "STORAGE":
                         variable = parts[2] if len(parts) > 2 else "UNKNOWN"
                       
                         self.symbol_table[variable] = self.current_address
+                        self.intermediate_code.append((self.current_address,variable))
                     self.current_address += 1
                 continue
 
             # Handle opcodes and add to intermediate code
             if parts[0] in self.opcode_table:
-                opcode = self.opcode_table[parts[0]]
-                self.intermediate_code.append((self.current_address, opcode))
+              
+                self.intermediate_code.append((self.current_address, parts[0]))
                 self.current_address += 1
 
             # Handle literals (e.g., =5, =A)
@@ -84,7 +90,7 @@ class AssemblerPassOne:
         for literal in self.literal_table:
             self.intermediate_code.append((self.current_address, f"= {literal}"))
             self.current_address += 1
-        self.literal_table.clear()  # Clear literal table after processing
+      # Clear literal table after processing
 
     def display_tables(self):
         print("Symbol Table:")
@@ -101,21 +107,23 @@ class AssemblerPassOne:
 
         print("\nIntermediate Code:")
         for code in self.intermediate_code:
-            print(f"Address: {code[0]}, Opcode: {code[1]}")
+            print(f" ({code[1]} ,{code[0]})")
 
         # Constants and Storage Declarations are omitted from final output
 
 # To run pass one
 if __name__ == "__main__":
     source_code = [
-        "START 100",
-        "LOOP:  ADD A, B",
-        "DECLARE CONSTANT 1000",
-        "DECLARE STORAGE a",
-        "DECLARE STORAGE b",
-        "ORIGIN 200",
-        "LTORG",
-        "END"
+       "START 100",
+"LOAD A",
+"ADD =5", 
+"SUB =10",  
+"STORE B",
+"ORIGIN 200",
+"DECLARE STORAGE A",
+"DECLARE STORAGE B",
+"LTORG",
+"END"
     ]
 
     assembler = AssemblerPassOne()
